@@ -9,7 +9,28 @@ function App() {
   const [chainData, setChainData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [showAllContracts, setShowAllContracts] = useState(false); // 新增：控制合约地址展开状态
+  const [showAllContracts, setShowAllContracts] = useState(false);
+
+  // 添加格式化解锁日期的函数
+  const formatUnlockDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('zh-CN', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
+  // 添加计算距离解锁时间的函数
+  const getDaysUntilUnlock = (dateString) => {
+    if (!dateString) return null;
+    const unlockDate = new Date(dateString);
+    const today = new Date();
+    const diffTime = unlockDate - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays > 0 ? diffDays : 0;
+  };
 
   const fetchTokenData = async () => {
     if (!tokenSymbol.trim()) {
@@ -29,7 +50,7 @@ function App() {
         `https://api.coingecko.com/api/v3/search?query=${tokenSymbol}`
       );
       
-      console.log('Search Response:', searchResponse.data); // 调试日志
+      console.log('Search Response:', searchResponse.data);
       
       const coins = searchResponse.data.coins;
       if (coins.length === 0) {
@@ -38,13 +59,12 @@ function App() {
         return;
       }
       
-      // 使用找到的第一个代币ID获取详细信息
       const coinId = coins[0].id;
       const coinName = coins[0].name;
       const coinSymbolLower = coins[0].symbol?.toLowerCase();
-      console.log('Found coin ID:', coinId, 'Name:', coinName); // 调试日志
+      console.log('Found coin ID:', coinId, 'Name:', coinName);
       
-      // 获取代币详细信息（包括代币经济学数据）
+      // 获取代币详细信息
       const coinDetailResponse = await axios.get(
         `https://api.coingecko.com/api/v3/coins/${coinId}?localization=false&tickers=false&market_data=true&community_data=true&developer_data=true&sparkline=false`
       );
@@ -58,7 +78,6 @@ function App() {
       const protocolsResponse = await axios.get('https://api.llama.fi/protocols');
       const protocols = protocolsResponse.data;
       
-      // 查找相关协议
       const relatedProtocols = protocols.filter(protocol => 
         protocol.name.toLowerCase().includes(tokenSymbol.toLowerCase()) ||
         protocol.symbol?.toLowerCase() === tokenSymbol.toLowerCase()
@@ -67,78 +86,79 @@ function App() {
       // 获取链TVL数据
       const chainsResponse = await axios.get('https://api.llama.fi/chains');
       
-      // 获取RootData项目信息（投资团队和融资情况）
+      // 获取代币解锁信息（模拟数据）
+      let unlockData = null;
+      try {
+        const contractAddress = coinDetailResponse.data?.contract_address;
+        
+        if (contractAddress || coinSymbolLower) {
+          // 这里使用模拟数据，实际使用时需要替换为真实API
+          unlockData = {
+            nextUnlock: {
+              date: '2024-03-15',
+              amount: 1000000,
+              percentage: 5.2,
+              category: 'Team'
+            },
+            totalLocked: 15000000,
+            totalUnlocked: 85000000,
+            unlockProgress: 85,
+            vestingSchedule: [
+              { date: '2024-01-15', amount: 2000000, category: 'Investors', status: 'completed' },
+              { date: '2024-03-15', amount: 1000000, category: 'Team', status: 'upcoming' },
+              { date: '2024-06-15', amount: 1500000, category: 'Ecosystem', status: 'upcoming' }
+            ]
+          };
+        }
+      } catch (unlockError) {
+        console.log('获取解锁信息失败:', unlockError.message);
+      }
+      
+      // 获取RootData项目信息
       let rootDataInfo = null;
       try {
-        // 注意：您需要替换为实际的API密钥
-        const API_KEY = 'Z6NlCXqyiO53Xv2WFNkTYIZi9KU2PQU8'; // 请替换为您的实际API密钥
-        
-        // 首先尝试通过项目名称搜索
+        const API_KEY = 'Z6NlCXqyiO53Xv2WFNkTYIZi9KU2PQU8';
         let searchQuery = coinName || tokenSymbol;
-        
-        // 如果有合约地址，优先使用合约地址查询
         const contractAddress = coinDetailResponse.data?.contract_address;
         
         let rootDataResponse;
         
         if (contractAddress) {
-          // 使用合约地址查询
-          rootDataResponse = await axios.get(
-            'https://api.rootdata.com/open/get_item',
+          // 使用代理路径，避免 CORS 问题
+          rootDataResponse = await axios.post(
+            '/open/get_item',  // 相对路径，通过 package.json 代理
+            {
+              contract_address: contractAddress,
+              include_team: true,
+              include_investors: true
+            },
             {
               headers: {
                 'apikey': API_KEY,
                 'Accept': 'application/json',
                 'Content-Type': 'application/json'
-              },
-              params: {
-                contract_address: contractAddress,
-                include_team: true,
-                include_investors: true
               }
             }
           );
         } else {
-          // 尝试通过项目名称搜索（这需要先获取项目列表或使用搜索API）
-          // 注意：RootData可能需要先搜索项目获取project_id，然后再查询详情
           console.log('尝试通过项目名称搜索:', searchQuery);
-          
-          // 如果RootData有搜索API，可以先搜索获取project_id
-          // 然后再调用get_item API
-          
-          // 暂时跳过，因为没有project_id或contract_address
           throw new Error('需要project_id或contract_address参数');
         }
         
-        console.log('RootData Response:', rootDataResponse.data);
+        console.log('RootData Response:',JSON.stringify(rootDataResponse.data));
         
-        if (rootDataResponse.data && rootDataResponse.data.project_name) {
-          rootDataInfo = rootDataResponse.data;
+        // 修正：API返回的数据结构是 {data: {project_name: ...}, result: 200}
+        if (rootDataResponse.data && rootDataResponse.data.data && rootDataResponse.data.data.project_name) {
+          rootDataInfo = rootDataResponse.data.data;  // 取data.data部分
         }
       } catch (rootDataError) {
         console.log('RootData API调用失败:', rootDataError.message);
-        if (rootDataError.response) {
-          console.log('RootData API错误详情:', {
-            status: rootDataError.response.status,
-            statusText: rootDataError.response.statusText,
-            data: rootDataError.response.data
-          });
-        }
-        
-        // 提供更详细的错误信息
-        if (rootDataError.response?.status === 401) {
-          console.log('API密钥无效，请检查API密钥是否正确');
-        } else if (rootDataError.response?.status === 400) {
-          console.log('请求参数错误，需要提供project_id或contract_address');
-        } else if (rootDataError.response?.status === 404) {
-          console.log('未找到对应的项目信息');
-        }
-        
-        // 如果RootData API失败，不影响其他数据的显示
       }
+        //rootDataInfo = rootDataResponse.data;
+
       
-      console.log('Coin Detail Data:', coinDetailResponse.data); // 调试日志
-      console.log('RootData Info:', rootDataInfo); // 调试日志
+      console.log('Coin Detail Data:', coinDetailResponse.data);
+      console.log('RootData Info:', rootDataInfo);
       
       setTokenData({
         price: priceResponse.data,
@@ -146,7 +166,8 @@ function App() {
         chains: chainsResponse.data,
         coinInfo: coins[0],
         coinDetail: coinDetailResponse.data,
-        rootDataInfo: rootDataInfo // 添加RootData信息
+        rootDataInfo: rootDataInfo,
+        unlockData: unlockData // 添加解锁数据
       });
 
     } catch (err) {
@@ -174,7 +195,7 @@ function App() {
     if (amount >= 1e3) return `$${(amount / 1e3).toFixed(1)}K`;
     return `$${amount}`;
   };
-
+  
   // 格式化融资轮次
   const formatFundingRound = (round) => {
     const roundMap = {
@@ -323,7 +344,7 @@ function App() {
                     </div>
                   </div>
                   
-                  {/* 合约地址信息 - 单独显示在代币概览底部 */}
+                  {/* 合约地址信息 */}
                   {(tokenData?.coinDetail?.contract_address || 
                     (tokenData?.coinDetail?.detail_platforms && 
                      Object.values(tokenData.coinDetail.detail_platforms).some(platform => platform.contract_address))) && (
@@ -378,6 +399,70 @@ function App() {
                   <p>流通供应量: {formatSupply(tokenData.coinDetail.market_data?.circulating_supply)}</p>
                   <p>最大供应量: {formatSupply(tokenData.coinDetail.market_data?.max_supply)}</p>
                 </div>
+                
+                {/* 新增：代币解锁信息卡片 */}
+                {tokenData.unlockData && (
+                  <div className="tokenomics-card unlock-info-card">
+                    <h3>🔓 解锁信息</h3>
+                    
+                    {/* 解锁进度 */}
+                    <div className="unlock-progress">
+                      <div className="progress-header">
+                        <span>解锁进度</span>
+                        <span className="progress-percentage">{tokenData.unlockData.unlockProgress}%</span>
+                      </div>
+                      <div className="progress-bar">
+                        <div 
+                          className="progress-fill" 
+                          style={{width: `${tokenData.unlockData.unlockProgress}%`}}
+                        ></div>
+                      </div>
+                      <div className="progress-details">
+                        <p>已解锁: {formatSupply(tokenData.unlockData.totalUnlocked)}</p>
+                        <p>待解锁: {formatSupply(tokenData.unlockData.totalLocked)}</p>
+                      </div>
+                    </div>
+                    
+                    {/* 下次解锁信息 */}
+                    {tokenData.unlockData.nextUnlock && (
+                      <div className="next-unlock">
+                        <h4>📅 下次解锁</h4>
+                        <div className="unlock-details">
+                          <p><strong>日期:</strong> {formatUnlockDate(tokenData.unlockData.nextUnlock.date)}</p>
+                          <p><strong>数量:</strong> {formatSupply(tokenData.unlockData.nextUnlock.amount)}</p>
+                          <p><strong>占比:</strong> {tokenData.unlockData.nextUnlock.percentage}%</p>
+                          <p><strong>类别:</strong> {tokenData.unlockData.nextUnlock.category}</p>
+                          {getDaysUntilUnlock(tokenData.unlockData.nextUnlock.date) !== null && (
+                            <p className="days-until">
+                              <strong>倒计时:</strong> {getDaysUntilUnlock(tokenData.unlockData.nextUnlock.date)} 天
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* 解锁时间表 */}
+                    {tokenData.unlockData.vestingSchedule && tokenData.unlockData.vestingSchedule.length > 0 && (
+                      <div className="vesting-schedule">
+                        <h4>📋 解锁时间表</h4>
+                        <div className="schedule-list">
+                          {tokenData.unlockData.vestingSchedule.slice(0, 5).map((unlock, index) => (
+                            <div key={index} className={`schedule-item ${unlock.status}`}>
+                              <div className="schedule-date">{formatUnlockDate(unlock.date)}</div>
+                              <div className="schedule-details">
+                                <span className="schedule-amount">{formatSupply(unlock.amount)}</span>
+                                <span className="schedule-category">{unlock.category}</span>
+                              </div>
+                              <div className={`schedule-status ${unlock.status}`}>
+                                {unlock.status === 'completed' ? '✅ 已完成' : '⏳ 待解锁'}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -411,8 +496,114 @@ function App() {
               ))}
             </div>
           </div>
+
+          {/* RootData 融资信息和团队信息 */}
+          {tokenData.rootDataInfo && (
+            <div className="data-section">
+              <h2>💼 项目信息 (RootData)</h2>
+              <div className="rootdata-grid">
+                
+                {/* 项目基本信息 */}
+                <div className="rootdata-card">
+                  <h3>📊 项目概况</h3>
+                  <div className="project-basic-info">
+                    <p><strong>项目名称:</strong> {tokenData.rootDataInfo.project_name || 'N/A'}</p>
+                    <p><strong>代币符号:</strong> {tokenData.rootDataInfo.token_symbol || 'N/A'}</p>
+                    <p><strong>项目简介:</strong> {tokenData.rootDataInfo.one_liner || 'N/A'}</p>
+                    <p><strong>项目描述:</strong> {tokenData.rootDataInfo.description || 'N/A'}</p>
+                    <p><strong>成立时间:</strong> {tokenData.rootDataInfo.establishment_date || 'N/A'}</p>
+                    <p><strong>项目状态:</strong> {tokenData.rootDataInfo.active ? '活跃' : '非活跃'}</p>
+                    {tokenData.rootDataInfo.social_media?.website && (
+                      <p><strong>官网:</strong> <a href={tokenData.rootDataInfo.social_media.website.trim()} target="_blank" rel="noopener noreferrer" style={{color: '#4CAF50'}}>{tokenData.rootDataInfo.social_media.website.trim()}</a></p>
+                    )}
+                    {tokenData.rootDataInfo.rootdataurl && (
+                      <p><strong>RootData链接:</strong> <a href={tokenData.rootDataInfo.rootdataurl.trim()} target="_blank" rel="noopener noreferrer" style={{color: '#4CAF50'}}>查看详情</a></p>
+                    )}
+                  </div>
+                </div>
+
+                {/* 项目标签 */}
+                {tokenData.rootDataInfo.tags && tokenData.rootDataInfo.tags.length > 0 && (
+                  <div className="rootdata-card">
+                    <h3>🏷️ 项目标签</h3>
+                    <div className="tags-container">
+                      {tokenData.rootDataInfo.tags.map((tag, index) => (
+                        <span key={index} className="project-tag" style={{background: '#4CAF50', color: 'white', padding: '4px 8px', borderRadius: '12px', margin: '2px', display: 'inline-block', fontSize: '0.9em'}}>
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 投资机构 */}
+                {tokenData.rootDataInfo.investors && tokenData.rootDataInfo.investors.length > 0 && (
+                  <div className="rootdata-card">
+                    <h3>🏛️ 投资机构</h3>
+                    <div className="investors-grid">
+                      {tokenData.rootDataInfo.investors.map((investor, index) => (
+                        <div key={index} className="investor-card" style={{border: '1px solid #4a5568', borderRadius: '8px', padding: '12px', margin: '8px 0'}}>
+                          {investor.logo && (
+                            <img src={investor.logo.trim()} alt={investor.name} style={{width: '40px', height: '40px', borderRadius: '50%', marginBottom: '8px'}} onError={(e) => e.target.style.display = 'none'} />
+                          )}
+                          <p className="investor-name" style={{fontWeight: 'bold', marginBottom: '4px'}}>{investor.name || 'N/A'}</p>
+                          <p className="investor-type" style={{fontSize: '0.9em', color: '#a0aec0'}}>
+                            {investor.type === 1 ? '交易所' : investor.type === 2 ? '投资机构' : '其他'}
+                            {investor.lead_investor === 1 && ' (领投)'}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 相似项目 */}
+                {tokenData.rootDataInfo.similar_project && tokenData.rootDataInfo.similar_project.length > 0 && (
+                  <div className="rootdata-card">
+                    <h3>🔗 相似项目</h3>
+                    <div className="similar-projects-grid">
+                      {tokenData.rootDataInfo.similar_project.slice(0, 6).map((project, index) => (
+                        <div key={index} className="similar-project-card" style={{border: '1px solid #4a5568', borderRadius: '8px', padding: '12px', margin: '8px 0'}}>
+                          {project.logo && (
+                            <img src={project.logo.trim()} alt={project.project_name} style={{width: '32px', height: '32px', borderRadius: '50%', marginBottom: '8px'}} onError={(e) => e.target.style.display = 'none'} />
+                          )}
+                          <p className="project-name" style={{fontWeight: 'bold', marginBottom: '4px'}}>{project.project_name}</p>
+                          <p className="project-desc" style={{fontSize: '0.9em', color: '#a0aec0'}}>{project.brief_description}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 社交媒体链接 */}
+                {tokenData.rootDataInfo.social_media && (
+                  <div className="rootdata-card">
+                    <h3>🌐 社交媒体</h3>
+                    <div className="social-links">
+                      {tokenData.rootDataInfo.social_media.website && (
+                        <a href={tokenData.rootDataInfo.social_media.website.trim()} target="_blank" rel="noopener noreferrer" className="social-link" style={{display: 'inline-block', margin: '4px 8px', padding: '8px 12px', background: '#4CAF50', color: 'white', borderRadius: '6px', textDecoration: 'none'}}>🌐 官网</a>
+                      )}
+                      {tokenData.rootDataInfo.social_media.github && (
+                        <a href={tokenData.rootDataInfo.social_media.github.trim()} target="_blank" rel="noopener noreferrer" className="social-link" style={{display: 'inline-block', margin: '4px 8px', padding: '8px 12px', background: '#333', color: 'white', borderRadius: '6px', textDecoration: 'none'}}>💻 GitHub</a>
+                      )}
+                      {tokenData.rootDataInfo.social_media.X && (
+                        <a href={tokenData.rootDataInfo.social_media.X.trim()} target="_blank" rel="noopener noreferrer" className="social-link" style={{display: 'inline-block', margin: '4px 8px', padding: '8px 12px', background: '#1DA1F2', color: 'white', borderRadius: '6px', textDecoration: 'none'}}>🐦 Twitter</a>
+                      )}
+                      {tokenData.rootDataInfo.social_media.medium && (
+                        <a href={tokenData.rootDataInfo.social_media.medium.trim()} target="_blank" rel="noopener noreferrer" className="social-link" style={{display: 'inline-block', margin: '4px 8px', padding: '8px 12px', background: '#00ab6c', color: 'white', borderRadius: '6px', textDecoration: 'none'}}>📝 Medium</a>
+                      )}
+                      {tokenData.rootDataInfo.social_media.coingecko && (
+                        <a href={`https://www.coingecko.com/en/coins/${tokenData.rootDataInfo.social_media.coingecko}`} target="_blank" rel="noopener noreferrer" className="social-link" style={{display: 'inline-block', margin: '4px 8px', padding: '8px 12px', background: '#8dc647', color: 'white', borderRadius: '6px', textDecoration: 'none'}}>🦎 CoinGecko</a>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+              </div>
+            </div>
+          )}
         </div>
-		)}
+        )}
       </header>
     </div>
   );

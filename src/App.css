@@ -1052,3 +1052,146 @@ h1 {
 .show-more-button:active {
   transform: translateY(1px);
 }
+
+/* 解锁信息卡片样式 */
+.unlock-info-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.unlock-progress {
+  margin-bottom: 20px;
+}
+
+.progress-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.progress-percentage {
+  color: #4ade80;
+  font-size: 1.1em;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4ade80, #22c55e);
+  transition: width 0.3s ease;
+}
+
+.progress-details p {
+  margin: 4px 0;
+  font-size: 0.9em;
+}
+
+.next-unlock {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.next-unlock h4 {
+  margin: 0 0 10px 0;
+  color: #fbbf24;
+}
+
+.unlock-details p {
+  margin: 6px 0;
+  font-size: 0.9em;
+}
+
+.days-until {
+  color: #f59e0b !important;
+  font-weight: 600;
+}
+
+.vesting-schedule {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 15px;
+  border-radius: 8px;
+}
+
+.vesting-schedule h4 {
+  margin: 0 0 15px 0;
+  color: #a78bfa;
+}
+
+.schedule-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.schedule-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  font-size: 0.85em;
+}
+
+.schedule-item.completed {
+  opacity: 0.7;
+}
+
+.schedule-date {
+  font-weight: 600;
+  min-width: 80px;
+}
+
+.schedule-details {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  margin: 0 10px;
+}
+
+.schedule-amount {
+  font-weight: 600;
+  color: #60a5fa;
+}
+
+.schedule-category {
+  font-size: 0.8em;
+  color: #9ca3af;
+}
+
+.schedule-status {
+  font-size: 0.8em;
+  font-weight: 600;
+}
+
+.schedule-status.completed {
+  color: #4ade80;
+}
+
+.schedule-status.upcoming {
+  color: #fbbf24;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .schedule-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+  }
+  
+  .schedule-details {
+    margin: 5px 0;
+  }
+}
