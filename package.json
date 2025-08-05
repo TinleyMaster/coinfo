@@ -1,40 +1,25 @@
 {
-  "name": "coinfo",
-  "version": "0.1.0",
-  "private": true,
-  "proxy": "https://api.rootdata.com",
-  "dependencies": {
-    "@testing-library/jest-dom": "^5.17.0",
-    "@testing-library/react": "^13.4.0",
-    "@testing-library/user-event": "^13.5.0",
-    "axios": "^1.7.7",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "react-scripts": "5.0.1",
-    "web-vitals": "^2.1.4"
-  },
+  "name": "coininfo-fullstack",
+  "version": "1.0.0",
+  "description": "加密货币 DeFi 数据查询系统",
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "start": "concurrently \"npm run start:backend\" \"npm run start:frontend\"",
+    "start:backend": "cd backend && npm install && npm start",
+    "start:frontend": "cd frontend && npm install && npm start",
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
+    "build": "cd frontend && npm run build",
+    "dev": "concurrently -n \"backend,frontend\" -c \"bgBlue,bgGreen\" \"npm run start:backend\" \"npm run start:frontend\""
   },
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ]
+  "devDependencies": {
+    "concurrently": "^7.6.0"
   },
-  "browserslist": {
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
-    ],
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ]
-  }
+  "keywords": [
+    "cryptocurrency",
+    "defi",
+    "react",
+    "nodejs",
+    "mongodb"
+  ],
+  "author": "Your Name",
+  "license": "MIT"
 }
